@@ -1,0 +1,144 @@
+---
+title: "Road Crash Queensland Report"
+Author: Einat Edelstien and Asaf Eliyahu
+output: html_document
+---
+
+Information on crashes in Queensland for all reported road traffic crashes 2001-2010, fatal crashes to 31 December 2013, hospitalisation crashes to 30 September 2013, medical treatment and minor injury crashes to 31 December 2011.
+
+This data has been extracted from the Queensland Road Crash Database.
+
+This resource contains information on crashes reported to the police which resulted from the movement of at least 1 road vehicle on a road or road related area. Crashes listed in this resource have occurred on a public road and meet one of the following criteria:
+
+- a person is killed or injured, or
+- at least 1 vehicle was towed away, or
+- the value of the property damage meets the appropriate criteria listed below.
+Property damage:
+
+    * $2500 or more damage to property other than vehicles (after 1 December 1999)
+    * $2500 or more damage to vehicle and/or other property (after 1 December 1991 and before 1 December 1999)
+    * value of property damage is greater than $1000 (before December 1991).
+    
+The report can be found [Here](http://www.tmr.qld.gov.au/~/media/aboutus/corpinfo/Open%20data/crash/locations.csv)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if (!file.exists("./Road crash Queensland")) { dir.create("./Road crash Queensland") }
+fileURL <- "http://www.tmr.qld.gov.au/~/media/aboutus/corpinfo/Open%20data/crash/locations.csv"
+download.file(fileURL, destfile = "./Road crash Queensland/Road crash Queensland.csv", method = "auto")
+dateDownloaded<-date()
+Data<-read.csv("./Road crash Queensland/Road crash Queensland.csv")
+
+```
+
+```{r}
+summary(Data)
+```
+
+# Distribution of road crash in Brisbane, Queensland, Australia
+
+The following maps shows the distribution of road crash in Brisbane, Queensland, Australia.
+Each green point on the map represents a road crash where the total casualty is higher than one.
+We can see that most points are red and therefore we can conclude that most road crash had a total casualty of one or less. 
+
+
+```{r, echo=FALSE, warning=FALSE, include=FALSE}
+#install.packages("ggmap")
+#install.packages("ggplot2")
+#install.packages("maps")
+#install.packages("grid")
+library(ggmap)
+library(ggplot2)
+library(maps)
+library(grid)
+
+# Brisbane - 2,065,996
+map<-get_map(as.numeric(geocode("Brisbane, QLD, Australia")))
+QueenslandMap = ggmap(map)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+QueenslandMap +  geom_point(data=Data, aes(x=Data$Crash_Longitude_GDA94, y=Data$Crash_Latitude_GDA94, colour=ifelse(Data$Count_Casualty_Total>1,T,F),alpha=0.01),size=2,shape=20, cex = 0.1) + guides(fill= FALSE, alpha=FALSE, size = FALSE)
+```
+
+The following map shows the distribution of Road crash based on the atmospheric condition. 
+Each green point on the map represents a road crash which occurred where the atmospheric condition was clear. We can clearly see that most road crash in Queensland occurred when the condition was clear. 
+
+This is an interesting finding as we may expect that most road crash will occur in bad atmospheric condition such as Fog, Raining or Dust. We may learn from this finding that the atmospheric condition doesn't have a lot of affection on the statistics of road crash in Queensland.
+
+
+```{r, echo=FALSE, warning=FALSE}
+QueenslandMap +  geom_point(data=Data, aes(x=Data$Crash_Longitude_GDA94, y=Data$Crash_Latitude_GDA94, colour=ifelse(Data$Crash_Atmospheric_Condition =='Clear',T,F),alpha=0.01),size=2,shape=20, cex = 0.1) + guides(fill= FALSE, alpha=FALSE, size = FALSE)
+```
+
+The following plot shows the distribution of road crash in Queensland comparing the atmospheric condition and amount of casualty hospitalised. From the plot we can learn on the influence of atmospheric on the amount of casualty hospitalised.
+
+
+```{r, echo=FALSE}
+dsmall <- Data[sample(nrow(Data), 20000), ]  # Sampling a smaller set for some graphs
+qplot(Crash_Latitude_GDA94, Crash_Longitude_GDA94, data=dsmall, facets = ~Crash_Atmospheric_Condition, col=Count_Casualty_Hospitalised)
+```
+
+
+
+# Plots
+
+The following plot shows the frequency of road crash in Queensland in each year since 2001 to 2014.
+We may conclude that in the last few year the number of road crash decreases and the reasons for it may be the consciousness of people to the dangers in the roads.  If we will continue to educate children in school and increase the consciousness of peoples to the dangers in the roads, as years will go by the number of road crash will continue to decrease.
+
+
+```{r, echo=FALSE}
+hist(Data$Crash_Year, col="green", breaks = 50)
+abline (v = median(Data$Crash_Year), col = "magenta", lwd = 4)
+```
+
+The following plot shows the frequency of road crash in Queensland in each day of week. We may see that on Sunday the least road crash occurred compare to other days. On weekends most peoples stay at home with their family and this may be the reason for this findings. 
+
+```{r, echo=FALSE}
+counts <- table(Data$Crash_Day_Of_Week)
+barplot(counts, main="Road crash", xlab="Day of week")
+```
+
+The following plot shows the count of each type of unit involved in the road crash. We may learn that in most road crash, cars were involved, in second is the Motorcycle and third is the Truck.
+
+
+```{r, , echo=FALSE}
+dsmall <- Data[sample(nrow(Data), 300), ] 
+acar<-dsmall[dsmall$Count_Unit_Car>0,]
+amot<-dsmall[dsmall$Count_Unit_Motorcycle_Moped>0,]
+abus<-dsmall[dsmall$Count_Unit_Bus>0,]
+atru<-dsmall[dsmall$Count_Unit_Truck>0,]
+abic<-dsmall[dsmall$Count_Unit_Bicycle>0,]
+aped<-dsmall[dsmall$Count_Unit_Pedestrian>0,]
+
+c1<-nrow(acar)
+c2<-nrow(amot)
+c3<-nrow(abus)
+c4<-nrow(atru)
+c5<-nrow(abic)
+c6<-nrow(aped)
+pie(c(c1, c2, c3, c4, c5, c6), col=rainbow(6), labels = c("Car", "Motorcycle", "Bus", "Truck", "Bicycle", "Pedestrian"))
+
+```
+
+The following plot shows the number of road crash depends on the spped.
+We can see that most road crash occured where the speed was 60 km/h. We can conclude that most road crash occurred in lower speed.
+
+```{r, echo=FALSE}
+counts <- table(Data$Crash_Speed_Limit)
+barplot(counts, main="Road crash", xlab="Speed", col = "blue")
+```
+
+The following plot shows the road horiz align. We may see from the plot the effect of the road horiz align on the numbers of road cars occurred.
+
+```{r, echo=FALSE}
+boxplot(Crash_Year~Crash_Road_Horiz_Align, data = Data, col = "red")
+```
+
+The following plot shows the crash severity of Road crash.
+
+```{r, echo=FALSE}
+boxplot(Crash_Year~Crash_Severity, data = Data, col = "green")
+```
+
+
